@@ -7,9 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
-public class FileInfo {
-
-    private String filePath;
-    private byte[] checkSum;
-
+public class FileEntry {
+    private String product;
+    private String channel;
 }

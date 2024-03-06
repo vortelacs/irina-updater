@@ -4,12 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Map;
+
 @Getter
 @Setter
 @AllArgsConstructor
-public class FileInfo {
-
-    private String filePath;
-    private byte[] checkSum;
-
+public class ProductRequest {
+    private String name;
+    private Map<String, FileEntry> files;
 }

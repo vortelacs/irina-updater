@@ -1,16 +1,16 @@
-ALTER TABLE irina_updater.versionFile
+ALTER TABLE irina_updater.versionFiles
     ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
 
 
-UPDATE irina_updater.versionFile
+UPDATE irina_updater.versionFiles
 SET version =
-        ((IF(majorVersion = 1, 1, 0) << 48) |
-         (IF(minorVersion = 1, 1, 0) << 32) |
-         (IF(revisionVersion = 1, 1, 0) << 16) |
-         (IF(buildVersion = 1, 1, 0)));
+        ((majorVersion * POWER(2, 48)) +
+         (minorVersion * POWER(2, 32)) +
+         (revisionVersion * POWER(2, 16)) +
+         buildVersion);
 
 
-ALTER TABLE versionFile
+ALTER TABLE versionFiles
     DROP COLUMN majorVersion,
     DROP COLUMN minorVersion,
     DROP COLUMN revisionVersion,

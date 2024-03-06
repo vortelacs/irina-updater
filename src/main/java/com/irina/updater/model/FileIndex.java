@@ -1,28 +1,35 @@
 package com.irina.updater.model;
 
 
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Temporal;
-import jakarta.persistence.TemporalType;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.Date;
 
-@Table
 @Getter
 @Setter
 @AllArgsConstructor
-public class VersionFiles {
+@Entity
+@NoArgsConstructor
+@Table(name = "fileindex")
+public class FileIndex {
 
     @Id
+    @GeneratedValue(strategy=GenerationType.AUTO)
     private int id;
-
-    private long fileHash;
-
+    @Column(name = "fileHash", columnDefinition = "BINARY(64)")
+    private byte[] fileHash;
+    @Column(name = "uploadDate")
     @Temporal(TemporalType.TIMESTAMP)
     private Date uploadDate;
+
+
+    public FileIndex(byte[] fileHash){
+        this.fileHash = fileHash;
+    }
+
 
 }
