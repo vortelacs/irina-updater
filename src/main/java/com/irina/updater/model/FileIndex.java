@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.util.Date;
 
@@ -18,12 +19,13 @@ import java.util.Date;
 public class FileIndex {
 
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
     private int id;
     @Column(name = "fileHash", columnDefinition = "BINARY(64)")
     private byte[] fileHash;
     @Column(name = "uploadDate")
     @Temporal(TemporalType.TIMESTAMP)
+    @CreationTimestamp
     private Date uploadDate;
 
 
