@@ -24,7 +24,7 @@ public interface VersionFileRepository extends JpaRepository<VersionFile, String
     List<FileInfo> getFileInfoList(Long version, String channel, String product);
 
 
-    @Query("SELECT v.fileIndex.id FROM VersionFile v WHERE v.filePath = :filePath")
+    @Query("SELECT  MAX(v.fileIndex.id) FROM VersionFile v WHERE v.filePath = :filePath ")
     Integer getFileIdByFilePath(@Param("filePath") String filePath);
 
 
