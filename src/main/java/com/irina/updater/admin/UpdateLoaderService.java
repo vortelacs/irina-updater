@@ -7,6 +7,8 @@ import com.irina.updater.repository.VersionFileRepository;
 import com.irina.updater.service.ZipperService;
 import com.irina.updater.util.FileChecksumManager;
 import com.irina.updater.util.FileManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -22,6 +24,7 @@ import java.util.Objects;
 @Service
 public class UpdateLoaderService {
 
+    private final static Logger log = LoggerFactory.getLogger(UpdateLoaderService.class);
     private final ZipperService zipperService;
     private final VersionFileRepository versionFileRepository;
     private final FileIndexRepository fileIndexRepository;
@@ -43,6 +46,9 @@ public class UpdateLoaderService {
             File updateFolder = zipperService.unzipUpdate(tempUpdateFolder);
             ArrayList<Map<VersionFile, FileSystemResource>> fileResourceMapList = FileManager.processUpdateFolder(updateFolder);
             processFileResourceMapList(fileResourceMapList);
+        }
+        else{
+            log.warn("The update zip was empty so no update will be deployed");
         }
     }
 

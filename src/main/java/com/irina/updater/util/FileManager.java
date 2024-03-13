@@ -1,12 +1,13 @@
 package com.irina.updater.util;
 
 import com.irina.updater.model.VersionFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,6 +16,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class FileManager {
+
+    private final static Logger log = LoggerFactory.getLogger(FileManager.class);
 
     public static boolean doesFileExistInFolder(String folderPath, String fileName) {
         File folder = new File(folderPath);
@@ -34,6 +37,7 @@ public class FileManager {
         }
         return false;
     }
+
     public static void copyResourceFile(String sourceFile, String destinationFolder, String destinationFileName) throws IOException {
         Path sourcePath = Paths.get(sourceFile);
         Path destinationPath = Paths.get(destinationFolder, destinationFileName);
@@ -46,6 +50,7 @@ public class FileManager {
      */
     public static String saveReceivedFile(String saveDestination, MultipartFile file) {
         if (file.isEmpty()) {
+            log.warn("The update zip was empty");
             return "";
         }
 
@@ -70,19 +75,22 @@ public class FileManager {
 
 
     public static ArrayList<Map<VersionFile, FileSystemResource>> processUpdateFolder(File folder) throws IOException {
+        log.info("Processing " + folder.getPath() + " update folder");
         ArrayList<Map<VersionFile, FileSystemResource>> update = new ArrayList<>();
         File[] files = folder.listFiles();
         if (files != null) {
             for (File file : files) {
                 if (file.isDirectory()) {
                     if (!doesFileExistInFolder(file.getPath(), "_productMap.json")) {
-                        return processUpdateFolder(file);
+                        update.addAll(processUpdateFolder(file));
                     } else {
                         String product = JsonUtility.getValueFromJsonByKey(new File(file.getPath() + File.separator + "_productMap.json"), "product");
                         String version = JsonUtility.getValueFromJsonByKey(new File(file.getPath() + File.separator + "_productMap.json"), "version");
+                        log.info("Found a \"_productMap.json\" file in \"" + file.getPath() + "\" folder with product = " + product + " and version = " + version);
                         assert product != null;
                         assert version != null;
                         update.add(processProductFolder(file, file, product, Long.parseLong(version)));
+                        update.addAll(processUpdateFolder(file));
                     }
                 }
             }
@@ -92,21 +100,23 @@ public class FileManager {
     }
 
     private static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, File indexFolder, String product, Long version) {
-        File[] files = productFolder.listFiles();
+        log.info("Processing \"" + indexFolder.getPath() + "\" folder for product: " + product);
+        File[] files = indexFolder.listFiles();
 
         Map<VersionFile, FileSystemResource> filesMap = new HashMap<>();
         if (files != null) {
             for (File file : files) {
                 if (file.isDirectory()) {
                     if (!doesFileExistInFolder(file.getPath(), "_productMap.json")) {
-                        processProductFolder(productFolder, file, product, version);
+                        filesMap.putAll(processProductFolder(productFolder, file, product, version));
                     }
                 } else if (file.isFile()) {
-                    if (file.getName().equals("_productMap.json"))
+                    if (file.getName().matches("_productMap.json") || file.getName().matches("^.*\\.zip$")) {
+                        log.info("Skipping " + file.getName() + " file in \"" + file.getPath() + "\" folder");
                         continue;
-                    URI path = productFolder.toURI().relativize(indexFolder.toURI());
-                    String relativePath = file.toURI().relativize(new File(path).toURI()).getPath();
-                    filesMap.put(new VersionFile(relativePath, product, "main", version),new FileSystemResource(file));
+                    }
+                    String relativePath = productFolder.toURI().relativize(file.toURI()).getPath();
+                    filesMap.put(new VersionFile(relativePath, product, "main", version), new FileSystemResource(file));
                 }
             }
         } else {
