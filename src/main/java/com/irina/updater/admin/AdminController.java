@@ -1,13 +1,16 @@
 package com.irina.updater.admin;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
+
 @RestController
-@RequestMapping(value = "/admin")
+@RequestMapping("/admin")
 public class AdminController {
 
     private final AdminService adminService;
@@ -19,17 +22,17 @@ public class AdminController {
         this.updateLoaderService = updateLoaderService;
     }
 
-    @DeleteMapping("/delete-cache")
+    @DeleteMapping("/cache")
     public void deleteCache() throws IOException {
         adminService.deleteZipFiles();
     }
 
-    @PostMapping("/upload-updates")
-    public void uploadNewUpdate(@RequestBody MultipartFile zip) throws IOException {
+    @RequestMapping(path = "/update/products", method = POST, consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public void uploadNewUpdate(@RequestParam(required = false) MultipartFile zip) throws IOException {
         updateLoaderService.deployUpdate(zip);
     }
 
-    @GetMapping("/check-updates")
+    @GetMapping("/update/product")
     public void checkLocalUpdates() {
     }
 
