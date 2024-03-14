@@ -10,7 +10,7 @@ import java.io.IOException;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/v1/admin")
 public class AdminController {
 
     private final AdminService adminService;
@@ -24,16 +24,17 @@ public class AdminController {
 
     @DeleteMapping("/cache")
     public void deleteCache() throws IOException {
-        adminService.deleteZipFiles();
+        adminService.deleteCache();
     }
 
     @RequestMapping(path = "/update/products", method = POST, consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
-    public void uploadNewUpdate(@RequestParam(required = false) MultipartFile zip) throws IOException {
+    public void uploadProducts(@RequestParam(required = false) MultipartFile zip) throws IOException {
         updateLoaderService.deployUpdate(zip);
     }
 
-    @GetMapping("/update/product")
-    public void checkLocalUpdates() {
+    @RequestMapping(path = "/update/product", method = POST, consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public void uploadProduct(@RequestParam(required = false) MultipartFile zip, String product, String version) throws IOException {
+        updateLoaderService.deployUpdate(zip, product, version);
     }
 
 }

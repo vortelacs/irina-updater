@@ -56,9 +56,7 @@ public class FileManager {
 
         try {
             File folder = new File(saveDestination);
-            if (!folder.exists()) {
-                folder.mkdirs();
-            }
+            if (!folder.exists()) folder.mkdirs();
 
             // Save the file to the specified folder
             String fileName = file.getOriginalFilename();
@@ -99,8 +97,13 @@ public class FileManager {
         return update;
     }
 
+    public static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, String product, Long version){
+        log.info("Processing " + productFolder.getPath() + " update folder");
+        return processProductFolder(productFolder, productFolder, product, version);
+    }
+
     private static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, File indexFolder, String product, Long version) {
-        log.info("Processing \"" + indexFolder.getPath() + "\" folder for product: " + product);
+        log.trace("Processing \"" + indexFolder.getPath() + "\" folder for product: " + product);
         File[] files = indexFolder.listFiles();
 
         Map<VersionFile, FileSystemResource> filesMap = new HashMap<>();
