@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    password: 1234
+    url: jdbc:mariadb://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_DATABASE:irina_updater}?allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+  flyway:
+    baseline-on-migrate: true
+    password: 1234
+    schemas: irina_updater
+    user: root
+  jpa:
+    show-sql: true
+
