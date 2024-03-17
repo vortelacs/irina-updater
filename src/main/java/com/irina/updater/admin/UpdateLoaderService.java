@@ -7,6 +7,7 @@ import com.irina.updater.repository.VersionFileRepository;
 import com.irina.updater.service.ZipperService;
 import com.irina.updater.util.FileChecksumManager;
 import com.irina.updater.util.FileManager;
+import com.irina.updater.util.VersionParser;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +53,7 @@ public class UpdateLoaderService {
             File updateFolder = zipperService.unzipUpdate(tempUpdateFolder);
             ArrayList<Map<VersionFile, FileSystemResource>> fileResourceMapList = FileManager.processUpdateFolder(updateFolder);
             processFileResourceMapList(fileResourceMapList);
+
             new File(tempUpdateFolder).delete();
             FileUtils.cleanDirectory(updateFolder);
         } else {
@@ -67,11 +69,12 @@ public class UpdateLoaderService {
      * @param product   name of the product
      * @param version   version of the new update
      */
-    public void deployUpdate(MultipartFile updateZip, String product, String version) throws IOException {
+    public void deployUpdate(MultipartFile updateZip, String product, String version, String channel) throws IOException {
         String tempUpdateFolder = FileManager.saveReceivedFile(tempFolderPath, updateZip);
         if (!tempUpdateFolder.isEmpty()) {
             File updateFolder = zipperService.unzipUpdate(tempUpdateFolder);
-            Map<VersionFile, FileSystemResource> fileResourceMapList = FileManager.processProductFolder(updateFolder, product, Long.parseLong(version));
+            Long parsedVersion = VersionParser.parseNumbers(version);
+            Map<VersionFile, FileSystemResource> fileResourceMapList = FileManager.processProductFolder(updateFolder, product, parsedVersion, channel);
             processFileMap(fileResourceMapList);
             new File(tempUpdateFolder).delete();
             FileUtils.cleanDirectory(updateFolder);

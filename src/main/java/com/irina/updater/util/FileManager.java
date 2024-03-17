@@ -58,7 +58,6 @@ public class FileManager {
             File folder = new File(saveDestination);
             if (!folder.exists()) folder.mkdirs();
 
-            // Save the file to the specified folder
             String fileName = file.getOriginalFilename();
             String filePath = saveDestination + File.separator + fileName;
             File dest = new File(filePath);
@@ -84,10 +83,11 @@ public class FileManager {
                     } else {
                         String product = JsonUtility.getValueFromJsonByKey(new File(file.getPath() + File.separator + "_productMap.json"), "product");
                         String version = JsonUtility.getValueFromJsonByKey(new File(file.getPath() + File.separator + "_productMap.json"), "version");
+                        String channel = JsonUtility.getValueFromJsonByKey(new File(file.getPath() + File.separator + "_productMap.json"), "channel");
                         log.info("Found a \"_productMap.json\" file in \"" + file.getPath() + "\" folder with product = " + product + " and version = " + version);
                         assert product != null;
                         assert version != null;
-                        update.add(processProductFolder(file, file, product, Long.parseLong(version)));
+                        update.add(processProductFolder(file, file, product, Long.parseLong(version), channel));
                         update.addAll(processUpdateFolder(file));
                     }
                 }
@@ -97,12 +97,12 @@ public class FileManager {
         return update;
     }
 
-    public static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, String product, Long version){
+    public static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, String product, Long version, String channel){
         log.info("Processing " + productFolder.getPath() + " update folder");
-        return processProductFolder(productFolder, productFolder, product, version);
+        return processProductFolder(productFolder, productFolder, product, version, channel);
     }
 
-    private static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, File indexFolder, String product, Long version) {
+    private static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, File indexFolder, String product, Long version, String channel) {
         log.trace("Processing \"" + indexFolder.getPath() + "\" folder for product: " + product);
         File[] files = indexFolder.listFiles();
 
@@ -111,7 +111,7 @@ public class FileManager {
             for (File file : files) {
                 if (file.isDirectory()) {
                     if (!doesFileExistInFolder(file.getPath(), "_productMap.json")) {
-                        filesMap.putAll(processProductFolder(productFolder, file, product, version));
+                        filesMap.putAll(processProductFolder(productFolder, file, product, version, channel));
                     }
                 } else if (file.isFile()) {
                     if (file.getName().matches("_productMap.json") || file.getName().matches("^.*\\.zip$")) {
@@ -119,7 +119,7 @@ public class FileManager {
                         continue;
                     }
                     String relativePath = productFolder.toURI().relativize(file.toURI()).getPath();
-                    filesMap.put(new VersionFile(relativePath, product, "main", version), new FileSystemResource(file));
+                    filesMap.put(new VersionFile(relativePath, product, channel, version), new FileSystemResource(file));
                 }
             }
         } else {

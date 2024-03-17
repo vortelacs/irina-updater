@@ -17,7 +17,7 @@ public class AdminController {
     private final UpdateLoaderService updateLoaderService;
 
     @Autowired
-    AdminController(AdminService adminService, UpdateLoaderService updateLoaderService){
+    AdminController(AdminService adminService, UpdateLoaderService updateLoaderService) {
         this.adminService = adminService;
         this.updateLoaderService = updateLoaderService;
     }
@@ -27,14 +27,14 @@ public class AdminController {
         adminService.deleteCache();
     }
 
-    @RequestMapping(path = "/update/products", method = POST, consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    @RequestMapping(path = "/update/products", method = POST, consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public void uploadProducts(@RequestParam(required = false) MultipartFile zip) throws IOException {
         updateLoaderService.deployUpdate(zip);
     }
 
-    @RequestMapping(path = "/update/product", method = POST, consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
-    public void uploadProduct(@RequestParam(required = false) MultipartFile zip, String product, String version) throws IOException {
-        updateLoaderService.deployUpdate(zip, product, version);
+    @RequestMapping(path = "/update/product", method = POST, consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public void uploadProduct(@RequestParam(required = false) MultipartFile zip, String product, String version, String channel) throws IOException {
+        updateLoaderService.deployUpdate(zip, product, version, channel);
     }
 
 }
