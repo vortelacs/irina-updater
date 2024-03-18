@@ -1,6 +1,7 @@
 package com.irina.updater.util;
 
 import com.irina.updater.model.VersionFile;
+import com.irina.updater.model.dto.ProductInfoDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
@@ -41,7 +42,12 @@ public class FileManager {
     public static void copyResourceFile(String sourceFile, String destinationFolder, String destinationFileName) throws IOException {
         Path sourcePath = Paths.get(sourceFile);
         Path destinationPath = Paths.get(destinationFolder, destinationFileName);
-        Files.copy(sourcePath, destinationPath);
+        if (new File(destinationFolder + File.separator + destinationFileName).exists()) {
+            log.trace("File " + destinationFileName + " exists already so it will not be copied");
+        } else {
+            Files.copy(sourcePath, destinationPath);
+            log.trace("File " + destinationFileName + " was copied to the product folder");
+        }
     }
 
     /**
@@ -81,29 +87,25 @@ public class FileManager {
                     if (!doesFileExistInFolder(file.getPath(), "_productMap.json")) {
                         update.addAll(processUpdateFolder(file));
                     } else {
-                        String product = JsonUtility.getValueFromJsonByKey(new File(file.getPath() + File.separator + "_productMap.json"), "product");
-                        String version = JsonUtility.getValueFromJsonByKey(new File(file.getPath() + File.separator + "_productMap.json"), "version");
-                        String channel = JsonUtility.getValueFromJsonByKey(new File(file.getPath() + File.separator + "_productMap.json"), "channel");
-                        log.info("Found a \"_productMap.json\" file in \"" + file.getPath() + "\" folder with product = " + product + " and version = " + version);
-                        assert product != null;
-                        assert version != null;
-                        update.add(processProductFolder(file, file, product, Long.parseLong(version), channel));
+                        ProductInfoDTO productInfo = getProductMapInfo(file);
+                        log.info("Found a \"_productMap.json\" file in \"" + file.getPath() + "\" folder with product = " + productInfo.getProduct() + " and version = " + productInfo.getVersion());
+
+                        update.add(processProductFolder(file, file, productInfo));
                         update.addAll(processUpdateFolder(file));
                     }
                 }
             }
-
         }
         return update;
     }
 
-    public static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, String product, Long version, String channel){
+    public static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, ProductInfoDTO versionProductDTO) {
         log.info("Processing " + productFolder.getPath() + " update folder");
-        return processProductFolder(productFolder, productFolder, product, version, channel);
+        return processProductFolder(productFolder, productFolder, versionProductDTO);
     }
 
-    private static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, File indexFolder, String product, Long version, String channel) {
-        log.trace("Processing \"" + indexFolder.getPath() + "\" folder for product: " + product);
+    private static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, File indexFolder, ProductInfoDTO versionProductDTO) {
+        log.trace("Processing \"" + indexFolder.getPath() + "\" folder for product: " + versionProductDTO.getProduct());
         File[] files = indexFolder.listFiles();
 
         Map<VersionFile, FileSystemResource> filesMap = new HashMap<>();
@@ -111,7 +113,7 @@ public class FileManager {
             for (File file : files) {
                 if (file.isDirectory()) {
                     if (!doesFileExistInFolder(file.getPath(), "_productMap.json")) {
-                        filesMap.putAll(processProductFolder(productFolder, file, product, version, channel));
+                        filesMap.putAll(processProductFolder(productFolder, file, versionProductDTO));
                     }
                 } else if (file.isFile()) {
                     if (file.getName().matches("_productMap.json") || file.getName().matches("^.*\\.zip$")) {
@@ -119,12 +121,43 @@ public class FileManager {
                         continue;
                     }
                     String relativePath = productFolder.toURI().relativize(file.toURI()).getPath();
-                    filesMap.put(new VersionFile(relativePath, product, channel, version), new FileSystemResource(file));
+                    filesMap.put(new VersionFile(relativePath, versionProductDTO.getProduct(), versionProductDTO.getChannel(), versionProductDTO.getVersion()), new FileSystemResource(file));
                 }
             }
         } else {
             System.out.println("Folder is empty.");
         }
         return filesMap;
+    }
+
+
+    public static ArrayList<ProductInfoDTO> getUpdateVersions(File updateFolder) throws IOException {
+
+        log.info("Processing " + updateFolder.getPath() + " update folder");
+        ArrayList<ProductInfoDTO> versions = new ArrayList<>();
+        File[] files = updateFolder.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    if (!doesFileExistInFolder(file.getPath(), "_productMap.json")) {
+                        versions.addAll(getUpdateVersions(file));
+                    } else {
+                        versions.add(getProductMapInfo(file));
+                        versions.addAll(getUpdateVersions(file));
+                    }
+                }
+            }
+        }
+        return versions;
+    }
+
+
+    private static ProductInfoDTO getProductMapInfo(File productMapJson) throws IOException {
+        String product = JsonUtility.getValueFromJsonByKey(new File(productMapJson.getPath() + File.separator + "_productMap.json"), "product");
+        String version = JsonUtility.getValueFromJsonByKey(new File(productMapJson.getPath() + File.separator + "_productMap.json"), "version");
+        String channel = JsonUtility.getValueFromJsonByKey(new File(productMapJson.getPath() + File.separator + "_productMap.json"), "channel");
+        assert version != null;
+
+        return new ProductInfoDTO(product, channel, VersionParser.parseNumbers(version));
     }
 }

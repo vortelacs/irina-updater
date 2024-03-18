@@ -1,8 +1,8 @@
 package com.irina.updater.service;
 
-import com.irina.updater.model.VersionInfo;
+import com.irina.updater.model.dto.UpdateRequestDTO;
 import com.irina.updater.model.dto.FileInfo;
-import com.irina.updater.model.dto.ProductRequest;
+import com.irina.updater.model.dto.ProductRequestDTO;
 import com.irina.updater.repository.VersionFileRepository;
 import com.irina.updater.util.ManifestGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +40,7 @@ public class UpdaterService {
         return Files.exists(path);
     }
 
-    public String getUpdateZipFile(VersionInfo versionInfo) throws IOException {
+    public String getUpdateZipFile(UpdateRequestDTO versionInfo) throws IOException {
         Map<String, String> changedFiles;
         String zipName = String.format("%s-%s-%s-%s.zip", versionInfo.getUserVersion(), versionInfo.getLatestVersion(), versionInfo.getChannel(), versionInfo.getProduct());
         if (!checkZipFile(zipName)) {
@@ -56,7 +56,7 @@ public class UpdaterService {
         return versionFileRepository.findProductLatestVersion(channel, product);
     }
 
-    public Map<String, String> getUpdates(VersionInfo versionInfo) {
+    public Map<String, String> getUpdates(UpdateRequestDTO versionInfo) {
         Map<String, String> changedFiles = new HashMap<>();
         List<FileInfo> latestFiles = versionFileRepository.getFileInfoList(Long.parseLong(versionInfo.getLatestVersion()), versionInfo.getChannel(), versionInfo.getProduct());
         List<FileInfo> userFiles = versionFileRepository.getFileInfoList(Long.parseLong(versionInfo.getUserVersion()), versionInfo.getChannel(), versionInfo.getProduct());
@@ -79,7 +79,7 @@ public class UpdaterService {
         return changedFiles;
     }
 
-    public String getProductZip(ProductRequest productRequest) {
+    public String getProductZip(ProductRequestDTO productRequest) {
 
         productRequest.getFiles().forEach((path, productData) -> {
             String version = versionFileRepository.findProductLatestVersion(productData.getChannel(), productData.getProduct());

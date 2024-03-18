@@ -1,4 +1,4 @@
-package com.irina.updater.model;
+package com.irina.updater.model.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,7 +9,7 @@ import lombok.Setter;
 @RequiredArgsConstructor
 @Getter
 @Setter
-public class VersionInfo {
+public class UpdateRequestDTO {
     private final String userVersion;
     private String latestVersion;
     private final String channel;

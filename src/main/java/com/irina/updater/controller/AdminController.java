@@ -1,5 +1,7 @@
-package com.irina.updater.admin;
+package com.irina.updater.controller;
 
+import com.irina.updater.service.AdminService;
+import com.irina.updater.service.UpdateLoaderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;

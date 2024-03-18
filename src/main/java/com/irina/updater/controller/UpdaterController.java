@@ -1,7 +1,7 @@
 package com.irina.updater.controller;
 
-import com.irina.updater.model.VersionInfo;
-import com.irina.updater.model.dto.ProductRequest;
+import com.irina.updater.model.dto.UpdateRequestDTO;
+import com.irina.updater.model.dto.ProductRequestDTO;
 import com.irina.updater.service.UpdaterService;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
@@ -29,7 +29,7 @@ public class UpdaterController {
     @RequestMapping(value = "/archive", produces="application/zip")
     public ResponseEntity<FileSystemResource> getUpdate(@RequestParam String userVersion,@RequestParam String channel,@RequestParam String product) throws IOException {
 
-        VersionInfo versionInfo = new VersionInfo(userVersion, channel, product);
+        UpdateRequestDTO versionInfo = new UpdateRequestDTO(userVersion, channel, product);
         versionInfo.setLatestVersion(updaterService.getLatestVersion(versionInfo.getChannel(), versionInfo.getProduct()));
 
         if(versionInfo.getLatestVersion().equals(versionInfo.getUserVersion())){
@@ -38,12 +38,12 @@ public class UpdaterController {
                     HttpStatus.NO_CONTENT);
         }
 
-        return createResponse(new FileSystemResource(new File(updaterService.getUpdateZipFile(versionInfo))));
+            return createResponse(new FileSystemResource(new File(updaterService.getUpdateZipFile(versionInfo))));
     }
 
 
     @RequestMapping(value = "/product")
-    public ResponseEntity<FileSystemResource> getProduct(@RequestBody ProductRequest product) throws IOException{
+    public ResponseEntity<FileSystemResource> getProduct(@RequestBody ProductRequestDTO product) throws IOException{
 
         return createResponse(new FileSystemResource(new File(updaterService.getProductZip(product))));
     }

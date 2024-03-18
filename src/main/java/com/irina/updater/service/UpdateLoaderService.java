@@ -1,10 +1,11 @@
-package com.irina.updater.admin;
+package com.irina.updater.service;
 
+import com.irina.updater.exception.InvalidVersionException;
 import com.irina.updater.model.FileIndex;
 import com.irina.updater.model.VersionFile;
+import com.irina.updater.model.dto.ProductInfoDTO;
 import com.irina.updater.repository.FileIndexRepository;
 import com.irina.updater.repository.VersionFileRepository;
-import com.irina.updater.service.ZipperService;
 import com.irina.updater.util.FileChecksumManager;
 import com.irina.updater.util.FileManager;
 import com.irina.updater.util.VersionParser;
@@ -22,6 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
+
+import static com.irina.updater.util.FileManager.getUpdateVersions;
 
 @Service
 public class UpdateLoaderService {
@@ -51,6 +54,9 @@ public class UpdateLoaderService {
         String tempUpdateFolder = FileManager.saveReceivedFile(tempFolderPath, updateZip);
         if (!tempUpdateFolder.isEmpty()) {
             File updateFolder = zipperService.unzipUpdate(tempUpdateFolder);
+
+            getUpdateVersions(updateFolder).forEach(this::validateVersion);
+
             ArrayList<Map<VersionFile, FileSystemResource>> fileResourceMapList = FileManager.processUpdateFolder(updateFolder);
             processFileResourceMapList(fileResourceMapList);
 
@@ -71,10 +77,11 @@ public class UpdateLoaderService {
      */
     public void deployUpdate(MultipartFile updateZip, String product, String version, String channel) throws IOException {
         String tempUpdateFolder = FileManager.saveReceivedFile(tempFolderPath, updateZip);
+        ProductInfoDTO productInfo = new ProductInfoDTO(product, channel, VersionParser.parseNumbers(version));
         if (!tempUpdateFolder.isEmpty()) {
             File updateFolder = zipperService.unzipUpdate(tempUpdateFolder);
-            Long parsedVersion = VersionParser.parseNumbers(version);
-            Map<VersionFile, FileSystemResource> fileResourceMapList = FileManager.processProductFolder(updateFolder, product, parsedVersion, channel);
+            validateVersion(productInfo);
+            Map<VersionFile, FileSystemResource> fileResourceMapList = FileManager.processProductFolder(updateFolder, productInfo);
             processFileMap(fileResourceMapList);
             new File(tempUpdateFolder).delete();
             FileUtils.cleanDirectory(updateFolder);
@@ -114,6 +121,16 @@ public class UpdateLoaderService {
     private FileIndex createAndSaveFileIndex(String filePath) {
         byte[] checksum = Objects.requireNonNull(FileChecksumManager.calculateChecksum(new File(filePath))).getBytes();
         return fileIndexRepository.save(new FileIndex(checksum));
+    }
+
+    private void validateVersion(ProductInfoDTO productInfo) {
+        try {
+            String latestVersion = versionFileRepository.findProductLatestVersion(productInfo.getChannel(), productInfo.getProduct());
+            if (Long.parseLong(latestVersion) >= productInfo.getVersion())
+                throw new InvalidVersionException("Version of the " + productInfo.getProduct() + " product is equal or lower to the existent one");
+        } catch (InvalidVersionException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 

@@ -1,4 +1,4 @@
-package com.irina.updater.admin;
+package com.irina.updater.service;
 
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.slf4j.Logger;
