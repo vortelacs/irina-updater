@@ -113,21 +113,22 @@ public class UpdateLoaderService {
         } else {
             FileIndex fileIndex = createAndSaveFileIndex(fileResource.getPath());
             versionFile.setFileIndex(fileIndex);
-            FileManager.copyResourceFile(fileResource.getPath(), productPath, new String(fileIndex.getFileHash()));
+            FileManager.copyResourceFile(fileResource.getPath(), productPath, FileChecksumManager.byteArrayToHexString(fileIndex.getFileHash()));
         }
         versionFileRepository.save(versionFile);
     }
 
     private FileIndex createAndSaveFileIndex(String filePath) {
-        byte[] checksum = Objects.requireNonNull(FileChecksumManager.calculateChecksum(new File(filePath))).getBytes();
+        byte[] checksum = Objects.requireNonNull(FileChecksumManager.calculateChecksum(filePath));
         return fileIndexRepository.save(new FileIndex(checksum));
     }
 
     private void validateVersion(ProductInfoDTO productInfo) {
         try {
             String latestVersion = versionFileRepository.findProductLatestVersion(productInfo.getChannel(), productInfo.getProduct());
-            if (Long.parseLong(latestVersion) >= productInfo.getVersion())
-                throw new InvalidVersionException("Version of the " + productInfo.getProduct() + " product is equal or lower to the existent one");
+            if (latestVersion != null && !latestVersion.isEmpty())
+                if (Long.parseLong(latestVersion) >= productInfo.getVersion())
+                    throw new InvalidVersionException("Version of the " + productInfo.getProduct() + " product is equal or lower to the existent one");
         } catch (InvalidVersionException e) {
             throw new RuntimeException(e);
         }

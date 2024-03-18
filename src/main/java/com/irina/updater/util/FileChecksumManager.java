@@ -1,33 +1,22 @@
 package com.irina.updater.util;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 
 public class FileChecksumManager {
 
-    public static String calculateChecksum(File file) {
-        try (FileInputStream fis = new FileInputStream(file)){
-            MessageDigest digest = MessageDigest.getInstance("MD5");
-            byte[] buffer = new byte[8192];
-            int bytesRead;
+    public static byte[] calculateChecksum(String file) {
+        try {
+            return MessageDigest.getInstance("SHA-512").digest(Files.readAllBytes(Paths.get(file)));
 
-            while ((bytesRead = fis.read(buffer)) != -1) {
-                digest.update(buffer, 0, bytesRead);
-            }
-            byte[] checksumBytes = digest.digest();
-            StringBuilder sb = new StringBuilder();
-            for (byte b : checksumBytes) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException | IOException e) {
+        } catch(NoSuchAlgorithmException | IOException e){
             e.printStackTrace();
-            return null;
         }
+        return new byte[0];
     }
 
     public static String byteArrayToHexString(byte[] bytes) {
