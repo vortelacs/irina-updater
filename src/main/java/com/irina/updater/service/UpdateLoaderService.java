@@ -1,6 +1,5 @@
 package com.irina.updater.service;
 
-import com.irina.updater.exception.InvalidVersionException;
 import com.irina.updater.model.FileIndex;
 import com.irina.updater.model.VersionFile;
 import com.irina.updater.model.dto.ProductInfoDTO;
@@ -21,10 +20,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.irina.updater.util.FileManager.getUpdateVersions;
 
 @Service
 public class UpdateLoaderService {
@@ -46,21 +45,30 @@ public class UpdateLoaderService {
     }
 
     /**
-     * Deploy an update for a single product
+     * Deploy an update for multiple products
      *
      * @param updateZip receives a zip with files to be updated
+     * @param channel receive the channel of the product
      */
-    public void deployUpdate(MultipartFile updateZip) throws IOException {
-        String tempUpdateFolder = FileManager.saveReceivedFile(tempFolderPath, updateZip);
-        if (!tempUpdateFolder.isEmpty()) {
-            File updateFolder = zipperService.unzipUpdate(tempUpdateFolder);
+    public void deployUpdate(MultipartFile updateZip, String channel) throws IOException {
+        String updateZipPath = FileManager.saveReceivedFile(tempFolderPath, updateZip);
+        if (!updateZipPath.isEmpty()) {
+            File updateFolder = zipperService.unzipUpdate(updateZipPath);
 
-            getUpdateVersions(updateFolder).forEach(this::validateVersion);
+            ArrayList<Map<VersionFile, FileSystemResource>> fileResourceMapList = new ArrayList<>();
+            Map<String, ProductInfoDTO> productPathMap = FileManager.getProductList(updateFolder, channel);
 
-            ArrayList<Map<VersionFile, FileSystemResource>> fileResourceMapList = FileManager.processUpdateFolder(updateFolder);
+            productPathMap.forEach((path, productInfo) -> {
+                if (isVersionNew(productInfo))
+                    fileResourceMapList.add(FileManager.processProductFolder(new File(path), productInfo));
+                else {
+                    log.info("Skipping " + productInfo.getProduct() + " update. Version too low - " + productInfo.getVersion());
+                }
+            });
+
             processFileResourceMapList(fileResourceMapList);
 
-            new File(tempUpdateFolder).delete();
+            new File(updateZipPath).delete();
             FileUtils.cleanDirectory(updateFolder);
         } else {
             log.warn("The update zip was empty so no update will be deployed");
@@ -74,15 +82,23 @@ public class UpdateLoaderService {
      * @param updateZip receives a zip with files to be updated
      * @param product   name of the product
      * @param version   version of the new update
+     * @param channel receive the channel of the product
+     * @param ignoredPaths a list of ignored paths
      */
-    public void deployUpdate(MultipartFile updateZip, String product, String version, String channel) throws IOException {
+    public void deployUpdate(MultipartFile updateZip, String product, String version, String channel, List<String> ignoredPaths) throws IOException {
+        ProductInfoDTO productInfo = new ProductInfoDTO(product, channel, VersionParser.parseNumbers(version), ignoredPaths);
+        if (!isVersionNew(productInfo)) {
+            log.info("Skipped " + productInfo.getProduct() + " product due to the version lower than the last one - " + productInfo.getVersion());
+            return;
+        }
         String tempUpdateFolder = FileManager.saveReceivedFile(tempFolderPath, updateZip);
-        ProductInfoDTO productInfo = new ProductInfoDTO(product, channel, VersionParser.parseNumbers(version));
         if (!tempUpdateFolder.isEmpty()) {
             File updateFolder = zipperService.unzipUpdate(tempUpdateFolder);
-            validateVersion(productInfo);
-            Map<VersionFile, FileSystemResource> fileResourceMapList = FileManager.processProductFolder(updateFolder, productInfo);
-            processFileMap(fileResourceMapList);
+            if (isVersionNew(productInfo)) {
+                Map<VersionFile, FileSystemResource> fileResourceMapList = FileManager.processProductFolder(updateFolder, productInfo);
+                processFileMap(fileResourceMapList);
+            }
+
             new File(tempUpdateFolder).delete();
             FileUtils.cleanDirectory(updateFolder);
             updateFolder.delete();
@@ -123,16 +139,12 @@ public class UpdateLoaderService {
         return fileIndexRepository.save(new FileIndex(checksum));
     }
 
-    private void validateVersion(ProductInfoDTO productInfo) {
-        try {
-            String latestVersion = versionFileRepository.findProductLatestVersion(productInfo.getChannel(), productInfo.getProduct());
-            if (latestVersion != null && !latestVersion.isEmpty())
-                if (Long.parseLong(latestVersion) >= productInfo.getVersion())
-                    throw new InvalidVersionException("Version of the " + productInfo.getProduct() + " product is equal or lower to the existent one");
-        } catch (InvalidVersionException e) {
-            throw new RuntimeException(e);
-        }
+    private boolean isVersionNew(ProductInfoDTO productInfo) {
+
+        String latestVersion = versionFileRepository.findProductLatestVersion(productInfo.getChannel(), productInfo.getProduct());
+        if (latestVersion != null && !latestVersion.isEmpty())
+            return Long.parseLong(latestVersion) < productInfo.getVersion();
+
+        return true;
     }
-
-
 }

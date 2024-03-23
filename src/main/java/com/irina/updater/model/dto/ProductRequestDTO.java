@@ -11,5 +11,6 @@ import java.util.Map;
 @AllArgsConstructor
 public class ProductRequestDTO {
     private String name;
-    private Map<String, ProductChannelInfo> files;
+    private Map<String, ProductChannelDTO> files;
 }
+

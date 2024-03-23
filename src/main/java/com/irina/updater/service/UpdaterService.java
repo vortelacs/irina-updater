@@ -22,6 +22,7 @@ import static org.mariadb.jdbc.util.StringUtils.byteArrayToHexString;
 @Service
 public class UpdaterService {
 
+    public static final String MANIFEST_FILE_NAME = "_manifest.json";
     private final VersionFileRepository versionFileRepository;
     private final ZipperService zipperService;
     @Value("${irinabot.updater.location}/cache")
@@ -45,7 +46,7 @@ public class UpdaterService {
         String zipName = String.format("%s-%s-%s-%s.zip", versionInfo.getUserVersion(), versionInfo.getLatestVersion(), versionInfo.getChannel(), versionInfo.getProduct());
         if (!checkZipFile(zipName)) {
             changedFiles = getUpdates(versionInfo);
-            ManifestGenerator.generateUpdateManifest(tempPath + File.separator +"_manifest.json" , changedFiles);
+            ManifestGenerator.generateUpdateManifest(tempPath + File.separator + MANIFEST_FILE_NAME, changedFiles);
             zipperService.generateProductUpdateZip(changedFiles, zipFolder, zipName);
         }
 

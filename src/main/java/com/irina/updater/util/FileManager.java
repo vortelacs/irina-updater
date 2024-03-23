@@ -12,13 +12,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class FileManager {
 
     private final static Logger log = LoggerFactory.getLogger(FileManager.class);
+    public static final String MANIFEST_FILE = "_productMap.json";
 
     public static boolean doesFileExistInFolder(String folderPath, String fileName) {
         File folder = new File(folderPath);
@@ -76,88 +77,66 @@ public class FileManager {
         }
     }
 
+    public static Map<String, ProductInfoDTO> getProductList(File folder, String channel) throws IOException {
+        log.trace("Searching in " + folder.getPath() + " update folder for " + MANIFEST_FILE);
+        Map<String, ProductInfoDTO> productMap = new HashMap<>();
+        if (doesFileExistInFolder(folder.getPath(), MANIFEST_FILE)) {
+            ProductInfoDTO productInfo = getProductMapInfo(folder);
+            productInfo.setChannel(channel);
+            log.info("Found a \"" + MANIFEST_FILE + "\" file in \"" + folder.getPath() + "\" folder with product = " + productInfo.getProduct() + " and version = " + productInfo.getVersion());
+            productMap.put(folder.getPath(), productInfo);
+        }
 
-    public static ArrayList<Map<VersionFile, FileSystemResource>> processUpdateFolder(File folder) throws IOException {
-        log.info("Processing " + folder.getPath() + " update folder");
-        ArrayList<Map<VersionFile, FileSystemResource>> update = new ArrayList<>();
         File[] files = folder.listFiles();
         if (files != null) {
             for (File file : files) {
                 if (file.isDirectory()) {
-                    if (!doesFileExistInFolder(file.getPath(), "_productMap.json")) {
-                        update.addAll(processUpdateFolder(file));
-                    } else {
-                        ProductInfoDTO productInfo = getProductMapInfo(file);
-                        log.info("Found a \"_productMap.json\" file in \"" + file.getPath() + "\" folder with product = " + productInfo.getProduct() + " and version = " + productInfo.getVersion());
-
-                        update.add(processProductFolder(file, file, productInfo));
-                        update.addAll(processUpdateFolder(file));
-                    }
+                    productMap.putAll(getProductList(file, channel));
                 }
             }
         }
-        return update;
+        return productMap;
     }
 
-    public static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, ProductInfoDTO versionProductDTO) {
+
+
+    public static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, ProductInfoDTO productInfo) {
         log.info("Processing " + productFolder.getPath() + " update folder");
-        return processProductFolder(productFolder, productFolder, versionProductDTO);
+        IgnoreFileParser.IgnorePaths ignorePaths = IgnoreFileParser.compile(productInfo.getIgnoredPaths());
+        return processProductFolder(productFolder, productFolder, productInfo, ignorePaths);
     }
 
-    private static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, File indexFolder, ProductInfoDTO versionProductDTO) {
-        log.trace("Processing \"" + indexFolder.getPath() + "\" folder for product: " + versionProductDTO.getProduct());
+    public static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, File indexFolder, ProductInfoDTO productInfo, IgnoreFileParser.IgnorePaths ignorePaths) {
+        log.trace("Processing \"" + indexFolder.getPath() + "\" folder for product: " + productInfo.getProduct());
         File[] files = indexFolder.listFiles();
 
         Map<VersionFile, FileSystemResource> filesMap = new HashMap<>();
         if (files != null) {
             for (File file : files) {
-                if (file.isDirectory()) {
-                    if (!doesFileExistInFolder(file.getPath(), "_productMap.json")) {
-                        filesMap.putAll(processProductFolder(productFolder, file, versionProductDTO));
-                    }
+                if (file.isDirectory() && !doesFileExistInFolder(file.getPath(), MANIFEST_FILE)) {
+                    filesMap.putAll(processProductFolder(productFolder, file, productInfo, ignorePaths));
                 } else if (file.isFile()) {
-                    if (file.getName().matches("_productMap.json") || file.getName().matches("^.*\\.zip$")) {
+                    if (ignorePaths.denies(file.getName())) {
                         log.info("Skipping " + file.getName() + " file in \"" + file.getPath() + "\" folder");
                         continue;
                     }
                     String relativePath = productFolder.toURI().relativize(file.toURI()).getPath();
-                    filesMap.put(new VersionFile(relativePath, versionProductDTO.getProduct(), versionProductDTO.getChannel(), versionProductDTO.getVersion()), new FileSystemResource(file));
+                    filesMap.put(new VersionFile(relativePath, productInfo.getProduct(), productInfo.getChannel(), productInfo.getVersion()), new FileSystemResource(file));
                 }
             }
-        } else {
-            System.out.println("Folder is empty.");
         }
         return filesMap;
     }
 
 
-    public static ArrayList<ProductInfoDTO> getUpdateVersions(File updateFolder) throws IOException {
-
-        log.info("Processing " + updateFolder.getPath() + " update folder");
-        ArrayList<ProductInfoDTO> versions = new ArrayList<>();
-        File[] files = updateFolder.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.isDirectory()) {
-                    if (!doesFileExistInFolder(file.getPath(), "_productMap.json")) {
-                        versions.addAll(getUpdateVersions(file));
-                    } else {
-                        versions.add(getProductMapInfo(file));
-                        versions.addAll(getUpdateVersions(file));
-                    }
-                }
-            }
-        }
-        return versions;
-    }
-
-
     private static ProductInfoDTO getProductMapInfo(File productMapJson) throws IOException {
-        String product = JsonUtility.getValueFromJsonByKey(new File(productMapJson.getPath() + File.separator + "_productMap.json"), "product");
-        String version = JsonUtility.getValueFromJsonByKey(new File(productMapJson.getPath() + File.separator + "_productMap.json"), "version");
-        String channel = JsonUtility.getValueFromJsonByKey(new File(productMapJson.getPath() + File.separator + "_productMap.json"), "channel");
+        String product = JsonUtility.getValueFromJsonByKey(new File(productMapJson.getPath() + File.separator + MANIFEST_FILE), "product");
+        String version = JsonUtility.getValueFromJsonByKey(new File(productMapJson.getPath() + File.separator +MANIFEST_FILE), "version");
+        List<String> ignoredPaths = JsonUtility.getArrayValueFromJsonByKey(new File(productMapJson.getPath() + File.separator + MANIFEST_FILE), "ignorePaths");
         assert version != null;
 
-        return new ProductInfoDTO(product, channel, VersionParser.parseNumbers(version));
+        ProductInfoDTO productInfoDTO = new ProductInfoDTO(product, VersionParser.parseNumbers(version));
+        productInfoDTO.setIgnoredPaths(ignoredPaths);
+        return productInfoDTO;
     }
 }

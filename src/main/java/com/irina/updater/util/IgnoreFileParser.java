@@ -31,7 +31,37 @@ public class IgnoreFileParser {
                 return matchesAny(negatives, input) || !matchesAny(positives, input);
             }
         };
+
+
     }
+
+//    public static IgnorePaths compile(String content) {
+//        String[][] parsed = parse(content);
+//        List<Pattern> positives = compilePatterns(parsed[0]);
+//        List<Pattern> negatives = compilePatterns(parsed[1]);
+//
+//        return new IgnorePaths() {
+//            @Override
+//            public boolean accepts(String input) {
+//                if (input.startsWith("/")) input = input.substring(1);
+//                return matchesAny(negatives, input) || !matchesAny(positives, input);
+//            }
+//
+//            @Override
+//            public boolean denies(String input) {
+//                if (input.startsWith("/")) input = input.substring(1);
+//                return !(matchesAny(negatives, input) || !matchesAny(positives, input));
+//            }
+//
+//            @Override
+//            public boolean maybe(String input) {
+//                if (input.startsWith("/")) input = input.substring(1);
+//                return matchesAny(negatives, input) || !matchesAny(positives, input);
+//            }
+//        };
+//
+//
+//    }
 
     public static String[][] parse(List<String> content) {
         List<String> positives = new ArrayList<>();
@@ -49,7 +79,7 @@ public class IgnoreFileParser {
             }
         }
 
-        return new String[][] {positives.toArray(new String[0]), negatives.toArray(new String[0])};
+        return new String[][]{positives.toArray(new String[0]), negatives.toArray(new String[0])};
     }
 
     private static List<Pattern> compilePatterns(String[] patterns) {
@@ -81,7 +111,9 @@ public class IgnoreFileParser {
 
     public interface IgnorePaths {
         boolean accepts(String input);
+
         boolean denies(String input);
+
         boolean maybe(String input);
     }
 }

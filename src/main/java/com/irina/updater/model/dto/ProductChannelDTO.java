@@ -7,7 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
-public class ProductChannelInfo {
+public class ProductChannelDTO {
     private String product;
     private String channel;
 }

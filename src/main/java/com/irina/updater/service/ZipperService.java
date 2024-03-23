@@ -14,6 +14,9 @@ import java.util.Map;
 @Service
 public class ZipperService {
 
+    public static final String UPDATE_FOLDER_NAME = "update_folder";
+    public static final String MANIFEST_FILE_NAME = "_manifest.json";
+
     @Value("${irinabot.updater.location}/product")
     private String updaterFilesPath;
 
@@ -22,7 +25,7 @@ public class ZipperService {
 
     public void generateProductUpdateZip(Map<String, String> changedFiles, String zipPath, String zipName) {
 
-        String manifestFilePath = tempPath + File.separator + "_manifest.json";
+        String manifestFilePath = tempPath + File.separator + MANIFEST_FILE_NAME;
 
 
         Zipper.appendFileToZip(zipPath + File.separator + zipName, manifestFilePath);
@@ -35,7 +38,7 @@ public class ZipperService {
 
     public File unzipUpdate(String updateFolderPath) throws IOException {
         File updateFolderFile = new File(updateFolderPath);
-        File destinationFile = new File(updateFolderFile.getParent()  + File.separator + "update_folder");
+        File destinationFile = new File(updateFolderFile.getParent()  + File.separator + UPDATE_FOLDER_NAME);
         Zipper.unzip(updateFolderFile, destinationFile);
         return destinationFile;
     }
