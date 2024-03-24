@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.ArrayList;
 
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
@@ -36,8 +35,8 @@ public class AdminController {
     }
 
     @RequestMapping(path = "/update/product", method = POST, consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
-    public void uploadProduct(@RequestParam(required = false) MultipartFile zip, String product, String version, String channel, ArrayList<String> ignoredPaths) throws IOException {
-        updateLoaderService.deployUpdate(zip, product, version, channel, ignoredPaths);
+    public void uploadProduct(@RequestParam(required = false) MultipartFile zip, String product, String version, String channel) throws IOException {
+        updateLoaderService.deployUpdate(zip, product, version, channel);
     }
 
 }

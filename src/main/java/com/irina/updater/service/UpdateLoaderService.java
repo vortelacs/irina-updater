@@ -83,10 +83,9 @@ public class UpdateLoaderService {
      * @param product   name of the product
      * @param version   version of the new update
      * @param channel receive the channel of the product
-     * @param ignoredPaths a list of ignored paths
      */
-    public void deployUpdate(MultipartFile updateZip, String product, String version, String channel, List<String> ignoredPaths) throws IOException {
-        ProductInfoDTO productInfo = new ProductInfoDTO(product, channel, VersionParser.parseNumbers(version), ignoredPaths);
+    public void deployUpdate(MultipartFile updateZip, String product, String version, String channel) throws IOException {
+        ProductInfoDTO productInfo = new ProductInfoDTO(product, channel, VersionParser.parseNumbers(version), List.of()); //Ignore paths for single product is inactive
         if (!isVersionNew(productInfo)) {
             log.info("Skipped " + productInfo.getProduct() + " product due to the version lower than the last one - " + productInfo.getVersion());
             return;
