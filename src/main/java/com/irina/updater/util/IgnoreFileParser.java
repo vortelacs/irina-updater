@@ -35,34 +35,6 @@ public class IgnoreFileParser {
 
     }
 
-//    public static IgnorePaths compile(String content) {
-//        String[][] parsed = parse(content);
-//        List<Pattern> positives = compilePatterns(parsed[0]);
-//        List<Pattern> negatives = compilePatterns(parsed[1]);
-//
-//        return new IgnorePaths() {
-//            @Override
-//            public boolean accepts(String input) {
-//                if (input.startsWith("/")) input = input.substring(1);
-//                return matchesAny(negatives, input) || !matchesAny(positives, input);
-//            }
-//
-//            @Override
-//            public boolean denies(String input) {
-//                if (input.startsWith("/")) input = input.substring(1);
-//                return !(matchesAny(negatives, input) || !matchesAny(positives, input));
-//            }
-//
-//            @Override
-//            public boolean maybe(String input) {
-//                if (input.startsWith("/")) input = input.substring(1);
-//                return matchesAny(negatives, input) || !matchesAny(positives, input);
-//            }
-//        };
-//
-//
-//    }
-
     public static String[][] parse(List<String> content) {
         List<String> positives = new ArrayList<>();
         List<String> negatives = new ArrayList<>();
