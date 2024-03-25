@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.File;
 import java.io.IOException;
 
 @RestController
@@ -38,14 +37,14 @@ public class UpdaterController {
                     HttpStatus.NO_CONTENT);
         }
 
-            return createResponse(new FileSystemResource(new File(updaterService.getUpdateZipFile(versionInfo))));
+            return createResponse(updaterService.getUpdateZipFile(versionInfo));
     }
 
 
     @RequestMapping(value = "/product")
     public ResponseEntity<FileSystemResource> getProduct(@RequestBody ProductRequestDTO product) throws IOException{
 
-        return createResponse(new FileSystemResource(new File(updaterService.getProductZip(product))));
+        return createResponse(updaterService.getProductZip(product));
     }
 
     private ResponseEntity<FileSystemResource> createResponse(FileSystemResource resource) throws IOException {

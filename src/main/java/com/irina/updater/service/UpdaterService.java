@@ -5,8 +5,10 @@ import com.irina.updater.model.dto.FileInfo;
 import com.irina.updater.model.dto.ProductRequestDTO;
 import com.irina.updater.repository.VersionFileRepository;
 import com.irina.updater.util.ManifestGenerator;
+import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -28,7 +30,7 @@ public class UpdaterService {
     @Value("${irinabot.updater.location}/cache")
     private String zipFolder;
     @Value("${irinabot.updater.location}/temp")
-    private String tempPath;
+    private String tempFolder;
 
     @Autowired
     UpdaterService(VersionFileRepository versionFileRepository, ZipperService zipperService) {
@@ -41,16 +43,16 @@ public class UpdaterService {
         return Files.exists(path);
     }
 
-    public String getUpdateZipFile(UpdateRequestDTO versionInfo) throws IOException {
+    public FileSystemResource getUpdateZipFile(UpdateRequestDTO versionInfo) throws IOException {
         Map<String, String> changedFiles;
         String zipName = String.format("%s-%s-%s-%s.zip", versionInfo.getUserVersion(), versionInfo.getLatestVersion(), versionInfo.getChannel(), versionInfo.getProduct());
         if (!checkZipFile(zipName)) {
             changedFiles = getUpdates(versionInfo);
-            ManifestGenerator.generateUpdateManifest(tempPath + File.separator + MANIFEST_FILE_NAME, changedFiles);
+            ManifestGenerator.generateUpdateManifest(tempFolder + File.separator + MANIFEST_FILE_NAME, changedFiles);
             zipperService.generateProductUpdateZip(changedFiles, zipFolder, zipName);
         }
 
-        return zipFolder + "/" + zipName;
+        return new FileSystemResource(new File(zipFolder + "/" + zipName));
     }
 
     public String getLatestVersion(String channel, String product) {
@@ -80,8 +82,8 @@ public class UpdaterService {
         return changedFiles;
     }
 
-    public String getProductZip(ProductRequestDTO productRequest) {
-
+    public FileSystemResource getProductZip(ProductRequestDTO productRequest) throws IOException {
+        FileUtils.cleanDirectory(new File(tempFolder));
         productRequest.getFiles().forEach((path, productData) -> {
             String version = versionFileRepository.findProductLatestVersion(productData.getChannel(), productData.getProduct());
 
@@ -91,7 +93,7 @@ public class UpdaterService {
         });
 
 
-        return tempPath + File.separator + productRequest.getName() + ".zip";
+        return new FileSystemResource(new File(tempFolder + File.separator + productRequest.getName() + ".zip"));
     }
 
 
