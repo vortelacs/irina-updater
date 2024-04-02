@@ -5,6 +5,7 @@ import com.irina.updater.model.dto.ProductRequestDTO;
 import com.irina.updater.service.UpdaterService;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -36,7 +37,7 @@ public class UpdaterController {
         }
 
         if(versionInfo.getLatestVersion().equals(versionInfo.getUserVersion())){
-            return ResponseEntity.noContent().build();
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No updates available for this product");
         }
 
             return createResponse(updaterService.getUpdateZipFile(versionInfo));
