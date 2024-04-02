@@ -6,6 +6,8 @@ import com.irina.updater.model.dto.ProductRequestDTO;
 import com.irina.updater.repository.VersionFileRepository;
 import com.irina.updater.util.ManifestGenerator;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -24,6 +26,7 @@ import static org.mariadb.jdbc.util.StringUtils.byteArrayToHexString;
 @Service
 public class UpdaterService {
 
+    private final static Logger log = LoggerFactory.getLogger(UpdaterService.class);
     public static final String MANIFEST_FILE_NAME = "_manifest.json";
     private final VersionFileRepository versionFileRepository;
     private final ZipperService zipperService;
@@ -86,13 +89,17 @@ public class UpdaterService {
         FileUtils.cleanDirectory(new File(tempFolder));
         productRequest.getFiles().forEach((path, productData) -> {
             String version = versionFileRepository.findProductLatestVersion(productData.getChannel(), productData.getProduct());
-
-            List<FileInfo> productFileList  = versionFileRepository.getFileInfoList(Long.parseLong(version), productData.getChannel(), productData.getProduct());
-
-            zipperService.addProductToZip(productRequest.getName() + ".zip", path, productFileList);
+            if(version == null || version.isEmpty()){
+                log.warn("Product \"" + productData.getProduct() + "\" wasn't found - skipping...");
+            }
+            else {
+                List<FileInfo> productFileList = versionFileRepository.getFileInfoList(Long.parseLong(version), productData.getChannel(), productData.getProduct());
+                log.info("Adding product \"" + productData.getProduct() + "\" to the final zip");
+                zipperService.addProductToZip(productRequest.getName() + ".zip", path, productFileList);
+            }
         });
 
-
+        log.info("Final zip was generated");
         return new FileSystemResource(new File(tempFolder + File.separator + productRequest.getName() + ".zip"));
     }
 
