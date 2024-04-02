@@ -19,7 +19,7 @@ import java.util.Map;
 public class FileManager {
 
     private final static Logger log = LoggerFactory.getLogger(FileManager.class);
-    public static final String MANIFEST_FILE = "_productMap.json";
+    public static final String MANIFEST_FILE = "_manifest.json";
 
     public static boolean doesFileExistInFolder(String folderPath, String fileName) {
         File folder = new File(folderPath);
