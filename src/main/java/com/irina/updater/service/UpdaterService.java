@@ -42,7 +42,7 @@ public class UpdaterService {
     }
 
     private boolean checkZipFile(String zipName) {
-        Path path = Paths.get(zipName);
+        Path path = Paths.get(zipFolder + File.separator + zipName);
         return Files.exists(path);
     }
 
