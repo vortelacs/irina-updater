@@ -16,6 +16,7 @@ public class ZipperService {
 
     public static final String UPDATE_FOLDER_NAME = "update_folder";
     public static final String MANIFEST_FILE_NAME = "_manifest.json";
+    public static final String FILE_DELETION_MARK = "null";
 
     @Value("${irinabot.updater.location}/product")
     private String updaterFilesPath;
@@ -31,7 +32,8 @@ public class ZipperService {
         Zipper.appendFileToZip(zipPath + File.separator + zipName, manifestFilePath);
 
         for (Map.Entry<String, String> fileP : changedFiles.entrySet()) {
-            Zipper.appendFileToZip(zipPath + File.separator + zipName,   updaterFilesPath + File.separator + fileP.getValue());
+            if(!fileP.getValue().equals(FILE_DELETION_MARK))
+                Zipper.appendFileToZip(zipPath + File.separator + zipName,   updaterFilesPath + File.separator + fileP.getValue());
         }
     }
 
