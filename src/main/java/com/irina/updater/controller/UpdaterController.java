@@ -28,19 +28,19 @@ public class UpdaterController {
     @RequestMapping(value = "/archive", produces="application/zip")
     public ResponseEntity<?> getUpdate(@RequestParam String userVersion,@RequestParam String channel,@RequestParam String product) throws IOException {
 
-        UpdateRequestDTO versionInfo = new UpdateRequestDTO(userVersion, channel, product);
-        versionInfo.setLatestVersion(updaterService.getLatestVersion(versionInfo.getChannel(), versionInfo.getProduct()));
+        UpdateRequestDTO updateRequest = new UpdateRequestDTO(userVersion, channel, product);
+        updateRequest.setLatestVersion(updaterService.getLatestVersion(updateRequest.getChannel(), updateRequest.getProduct()));
 
-        if(versionInfo.getLatestVersion() == null || versionInfo.getLatestVersion().isEmpty())
+        if(updateRequest.getLatestVersion() == null || updateRequest.getLatestVersion().isEmpty())
         {
-            return ResponseEntity.badRequest().body("Product with the given name and channel doesn't exist");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Product with the given name and channel doesn't exist");
         }
 
-        if(versionInfo.getLatestVersion().equals(versionInfo.getUserVersion())){
+        if(updateRequest.getLatestVersion().equals(updateRequest.getUserVersion())){
             return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No updates available for this product");
         }
 
-            return createResponse(updaterService.getUpdateZipFile(versionInfo));
+            return createResponse(updaterService.getUpdateZipFile(updateRequest));
     }
 
 
