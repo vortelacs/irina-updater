@@ -21,7 +21,7 @@ public class FileManager {
     private final static Logger log = LoggerFactory.getLogger(FileManager.class);
     public static final String MANIFEST_FILE = "_manifest.json";
 
-    public static boolean doesFileExistInFolder(String folderPath, String fileName) {
+    public static boolean fileExistsInFolder(String folderPath, String fileName) {
         File folder = new File(folderPath);
 
         if (!folder.exists() || !folder.isDirectory()) {
@@ -77,10 +77,10 @@ public class FileManager {
         }
     }
 
-    public static Map<String, ProductInfoDTO> getProductList(File folder, String channel) throws IOException {
+    public static Map<String, ProductInfoDTO> findManifestFiles(File folder, String channel) throws IOException {
         log.trace("Searching in " + folder.getPath() + " update folder for " + MANIFEST_FILE);
         Map<String, ProductInfoDTO> productMap = new HashMap<>();
-        if (doesFileExistInFolder(folder.getPath(), MANIFEST_FILE)) {
+        if (fileExistsInFolder(folder.getPath(), MANIFEST_FILE)) {
             ProductInfoDTO productInfo = getProductMapInfo(folder);
             productInfo.setChannel(channel);
             log.info("Found a \"" + MANIFEST_FILE + "\" file in \"" + folder.getPath() + "\" folder with product = " + productInfo.getProduct() + " and version = " + productInfo.getVersion());
@@ -91,7 +91,7 @@ public class FileManager {
         if (files != null) {
             for (File file : files) {
                 if (file.isDirectory()) {
-                    productMap.putAll(getProductList(file, channel));
+                    productMap.putAll(findManifestFiles(file, channel));
                 }
             }
         }
@@ -100,27 +100,27 @@ public class FileManager {
 
 
 
-    public static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, ProductInfoDTO productInfo) {
-        log.info("Processing " + productFolder.getPath() + " update folder");
+    public static Map<VersionFile, FileSystemResource> getVersionFilePathMapByProduct(File productRootFolder, ProductInfoDTO productInfo) {
+        log.info("Processing " + productRootFolder.getPath() + " update folder");
         IgnoreFileParser.IgnorePaths ignorePaths = IgnoreFileParser.compile(productInfo.getIgnoredPaths());
-        return processProductFolder(productFolder, productFolder, productInfo, ignorePaths);
+        return getVersionFilePathMapByProduct(productRootFolder, productRootFolder, productInfo, ignorePaths);
     }
 
-    public static Map<VersionFile, FileSystemResource> processProductFolder(File productFolder, File indexFolder, ProductInfoDTO productInfo, IgnoreFileParser.IgnorePaths ignorePaths) {
+    public static Map<VersionFile, FileSystemResource> getVersionFilePathMapByProduct(File productRootFolder, File indexFolder, ProductInfoDTO productInfo, IgnoreFileParser.IgnorePaths ignorePaths) {
         log.trace("Processing \"" + indexFolder.getPath() + "\" folder for product: " + productInfo.getProduct());
         File[] files = indexFolder.listFiles();
 
         Map<VersionFile, FileSystemResource> filesMap = new HashMap<>();
         if (files != null) {
             for (File file : files) {
-                if (file.isDirectory() && !doesFileExistInFolder(file.getPath(), MANIFEST_FILE)) {
-                    filesMap.putAll(processProductFolder(productFolder, file, productInfo, ignorePaths));
+                if (file.isDirectory() && !fileExistsInFolder(file.getPath(), MANIFEST_FILE)) {
+                    filesMap.putAll(getVersionFilePathMapByProduct(productRootFolder, file, productInfo, ignorePaths));
                 } else if (file.isFile()) {
                     if (ignorePaths.denies(file.getName())) {
                         log.info("Skipping " + file.getName() + " file in \"" + file.getPath() + "\" folder");
                         continue;
                     }
-                    String relativePath = productFolder.toURI().relativize(file.toURI()).getPath();
+                    String relativePath = productRootFolder.toURI().relativize(file.toURI()).getPath();
                     filesMap.put(new VersionFile(relativePath, productInfo.getProduct(), productInfo.getChannel(), productInfo.getVersion()), new FileSystemResource(file));
                 }
             }

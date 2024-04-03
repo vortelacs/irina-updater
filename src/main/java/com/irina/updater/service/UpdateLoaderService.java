@@ -56,11 +56,11 @@ public class UpdateLoaderService {
             File updateFolder = zipperService.unzipUpdate(updateZipPath);
 
             ArrayList<Map<VersionFile, FileSystemResource>> fileResourceMapList = new ArrayList<>();
-            Map<String, ProductInfoDTO> productPathMap = FileManager.getProductList(updateFolder, channel);
+            Map<String, ProductInfoDTO> productPathMap = FileManager.findManifestFiles(updateFolder, channel);
 
             productPathMap.forEach((path, productInfo) -> {
                 if (isVersionNew(productInfo))
-                    fileResourceMapList.add(FileManager.processProductFolder(new File(path), productInfo));
+                    fileResourceMapList.add(FileManager.getVersionFilePathMapByProduct(new File(path), productInfo));
                 else {
                     log.info("Skipping " + productInfo.getProduct() + " update. Version too low - " + productInfo.getVersion());
                 }
@@ -94,7 +94,7 @@ public class UpdateLoaderService {
         if (!tempUpdateFolder.isEmpty()) {
             File updateFolder = zipperService.unzipUpdate(tempUpdateFolder);
             if (isVersionNew(productInfo)) {
-                Map<VersionFile, FileSystemResource> fileResourceMapList = FileManager.processProductFolder(updateFolder, productInfo);
+                Map<VersionFile, FileSystemResource> fileResourceMapList = FileManager.getVersionFilePathMapByProduct(updateFolder, productInfo);
                 processFileMap(fileResourceMapList);
             }
 
