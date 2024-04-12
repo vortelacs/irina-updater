@@ -1,45 +1,36 @@
 package com.irina.updater.util;
 
 import java.io.*;
-import java.net.URI;
 import java.nio.file.*;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
 
 public class Zipper {
 
-    public static void appendFileToZip(String zipFilePath, String filePath) {
-        appendFileToZip(zipFilePath, filePath, Paths.get(filePath).getFileName().toString());
+    public static void appendFileToZipInMemory(ByteArrayOutputStream zipOutputStream, String filePath) {
+        appendFileToZipInMemory(zipOutputStream, filePath, Paths.get(filePath).getFileName().toString());
     }
 
-    public static void appendFileToZip(String zipFilePath, String filePath, String entryName) {
-        Map<String, String> env = new HashMap<>();
-        env.put("create", "true");
+    public static void appendFileToZipInMemory(ByteArrayOutputStream zipOutputStream, String filePath, String entryName) {
+        File file = new File(filePath);
+        if (!file.exists() || !file.isFile()) {
+            throw new IllegalArgumentException("Invalid file path: " + filePath);
+        }
 
-        Path fileToAppend = Paths.get(filePath);
-        Path zipFile = Paths.get(zipFilePath);
-        URI zipUri = URI.create("jar:" + zipFile.toUri());
-
-        try {
-            try (FileSystem zipFileSystem = FileSystems.newFileSystem(zipUri, env)) {
-                String[] dirs = entryName.split("/");
-                Path currentPath = zipFileSystem.getPath("");
-                for (int i = 0; i < dirs.length - 1; i++) {
-                    currentPath = currentPath.resolve(dirs[i]);
-                    if (!Files.exists(currentPath)) {
-                        Files.createDirectories(currentPath);
-                    }
-                }
-                Path fileInZip = currentPath.resolve(dirs[dirs.length - 1]);
-                Files.copy(fileToAppend, fileInZip, StandardCopyOption.REPLACE_EXISTING);
-            }
+        try (ZipOutputStream zipStream = new ZipOutputStream(zipOutputStream)) {
+            ZipEntry entry = new ZipEntry(entryName);
+            zipStream.putNextEntry(entry);
+            Files.copy(file.toPath(), zipStream);
+            zipStream.closeEntry();
         } catch (IOException e) {
             throw new RuntimeException("Error appending file to ZIP: " + e.getMessage(), e);
         }
     }
+
 
     public static void unzip(File fileZip, File destDir) throws IOException {
         byte[] buffer = new byte[4096];
@@ -67,7 +58,6 @@ public class Zipper {
             }
         }
     }
-
     private static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
         File destFile = new File(destinationDir, zipEntry.getName());
         String destDirPath = destinationDir.getCanonicalPath();
@@ -77,33 +67,4 @@ public class Zipper {
         }
         return destFile;
     }
-
-    private static void zipFile(File fileToZip, String fileName, ZipOutputStream zipOut) throws IOException {
-        if (fileToZip.isHidden()) {
-            return;
-        }
-        ZipFile(fileToZip, fileName, zipOut);
-    }
-
-    private static void ZipFile(File fileToZip, String fileName, ZipOutputStream zipOut) throws IOException {
-        if (fileToZip.isDirectory()) {
-            String[] children = fileToZip.list();
-            assert children != null;
-            for (String child : children) {
-                zipFile(new File(fileToZip, child), fileName + File.separator + child, zipOut);
-            }
-            return;
-        }
-        try (FileInputStream fis = new FileInputStream(fileToZip)) {
-            ZipEntry zipEntry = new ZipEntry(fileName);
-            zipOut.putNextEntry(zipEntry);
-            byte[] bytes = new byte[4096];
-            int length;
-            while ((length = fis.read(bytes)) >= 0) {
-                zipOut.write(bytes, 0, length);
-            }
-        }
-    }
-
-
 }

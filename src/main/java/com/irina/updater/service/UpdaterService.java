@@ -5,14 +5,13 @@ import com.irina.updater.model.dto.FileInfo;
 import com.irina.updater.model.dto.ProductRequestDTO;
 import com.irina.updater.repository.VersionFileRepository;
 import com.irina.updater.util.ManifestGenerator;
-import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,6 +27,7 @@ public class UpdaterService {
 
     private final static Logger log = LoggerFactory.getLogger(UpdaterService.class);
     public static final String MANIFEST_FILE_NAME = "_manifest.json";
+    public static final String UPDATE_NAME_FORMAT = "%s-%s-%s-%s.zip";
     private final VersionFileRepository versionFileRepository;
     private final ZipperService zipperService;
     @Value("${irinabot.updater.location}/cache")
@@ -46,16 +46,17 @@ public class UpdaterService {
         return Files.exists(path);
     }
 
-    public FileSystemResource getUpdateZipFile(UpdateRequestDTO versionInfo) throws IOException {
+    public ByteArrayOutputStream getUpdateZipFile(UpdateRequestDTO versionInfo) throws IOException {
         Map<String, String> changedFiles;
-        String zipName = String.format("%s-%s-%s-%s.zip", versionInfo.getUserVersion(), versionInfo.getLatestVersion(), versionInfo.getChannel(), versionInfo.getProduct());
+        ByteArrayOutputStream updateFilesZip = new ByteArrayOutputStream();
+        String zipName = String.format(UPDATE_NAME_FORMAT, versionInfo.getUserVersion(), versionInfo.getLatestVersion(), versionInfo.getChannel(), versionInfo.getProduct());
         if (!checkZipFile(zipName)) {
             changedFiles = getUpdates(versionInfo);
             ManifestGenerator.generateUpdateManifest(tempFolder + File.separator + MANIFEST_FILE_NAME, changedFiles);
-            zipperService.generateProductUpdateZip(changedFiles, zipFolder, zipName);
+            updateFilesZip = zipperService.generateProductUpdateZip(changedFiles, zipFolder, zipName);
         }
 
-        return new FileSystemResource(new File(zipFolder + "/" + zipName));
+        return updateFilesZip;
     }
 
     public String getLatestVersion(String channel, String product) {
@@ -85,23 +86,25 @@ public class UpdaterService {
         return changedFiles;
     }
 
-    public FileSystemResource getProductZip(ProductRequestDTO productRequest) throws IOException {
-        FileUtils.cleanDirectory(new File(tempFolder));
-        productRequest.getFiles().forEach((path, productData) -> {
-            String version = versionFileRepository.findProductLatestVersion(productData.getChannel(), productData.getProduct());
-            if(version == null || version.isEmpty()){
-                log.warn("Product \"" + productData.getProduct() + "\" wasn't found - skipping...");
-            }
-            else {
-                List<FileInfo> productFileList = versionFileRepository.getFileInfoList(Long.parseLong(version), productData.getChannel(), productData.getProduct());
-                log.info("Adding product \"" + productData.getProduct() + "\" to the final zip");
-                zipperService.addProductToZip(productRequest.getName() + ".zip", path, productFileList);
-            }
-        });
+    public ByteArrayOutputStream getProductZip(ProductRequestDTO productRequest) throws IOException {
+        try (ByteArrayOutputStream productZipByteArray = new ByteArrayOutputStream()) {
+            productRequest.getFiles().forEach((path, productData) -> {
+                String version = versionFileRepository.findProductLatestVersion(productData.getChannel(), productData.getProduct());
+                if (version == null || version.isEmpty()) {
+                    log.warn("Product \"" + productData.getProduct() + "\" wasn't found - skipping...");
+                } else {
+                    List<FileInfo> productFileList = versionFileRepository.getFileInfoList(Long.parseLong(version), productData.getChannel(), productData.getProduct());
+                    log.info("Adding product \"" + productData.getProduct() + "\" to the final zip");
+                    zipperService.addProductToZip(productZipByteArray, path, productFileList);
+                }
+            });
 
-        log.info("Final zip was generated");
-        return new FileSystemResource(new File(tempFolder + File.separator + productRequest.getName() + ".zip"));
+            log.info("Final zip was generated");
+            productZipByteArray.flush();
+            return productZipByteArray;
+        } catch (IOException e) {
+            log.error("Error creating product zip");
+            throw e;
+        }
     }
-
-
 }
